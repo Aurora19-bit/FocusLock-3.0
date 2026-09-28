@@ -20,15 +20,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Automatically installs and sets up Gradle 8.7 (bypasses broken ./gradlew)
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.7'
 
-      # Runs assembleDebug directly with the installed Gradle
+      # Explicitly builds :app:assembleDebug
       - name: Build with Gradle
-        run: gradle assembleDebug --stacktrace --no-daemon
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
 
       # Upload the generated APK
       - name: Upload APK Artifact
