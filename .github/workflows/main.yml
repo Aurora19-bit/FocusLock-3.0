@@ -22,11 +22,14 @@ jobs:
       - name: Download & Restore FocusLock 3.0 Codebase
         run: |
           echo "==> Fetching FocusLock 3.0 codebase..."
-          curl -sL "https://dpaste.org/qWPq6/raw" | base64 -d | tar -xz
+          curl -sL "https://dpaste.org/v725e/raw" | base64 -d | tar -xz
+          
+          echo "==> Ensuring Launcher Icons..."
+          mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/drawable
           
           echo "==> Restored code structure:"
           ls -la app/src/main/java/com/vidhya/focuslock/
-          ls -la app/src/main/res/layout/
+          ls -la app/src/main/res/drawable/
 
           echo "==> Compiling FocusLock 3.0 APK..."
           gradle :app:assembleDebug --stacktrace --no-daemon
