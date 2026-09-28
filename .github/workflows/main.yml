@@ -1,17 +1,14 @@
 name: Build FocusLock APK
-on:
-  push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -22,394 +19,40 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Auto-repair Project Structure, Sources & Resources
+      - name: Organize Files & Build APK
         run: |
           mkdir -p app/src/main/java/com/vidhya/focuslock
+          mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/xml
-          mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/mipmap-anydpi-v26
           mkdir -p app/src/main/res/drawable
 
-          find . -name "*.kt" -not -path "*/app/src/main/java/com/vidhya/focuslock/*" -exec cp {} app/src/main/java/com/vidhya/focuslock/ \; 2>/dev/null || true
+          # Move all your existing code files into app directory
+          cp -f *.kt app/src/main/java/com/vidhya/focuslock/ 2>/dev/null || true
+          cp -f activity_*.xml app/src/main/res/layout/ 2>/dev/null || true
+          cp -f strings.xml colors.xml themes.xml app/src/main/res/values/ 2>/dev/null || true
+          cp -f accessibility_service_config.xml device_admin_receiver.xml app/src/main/res/xml/ 2>/dev/null || true
 
-          if [ ! -f "settings.gradle.kts" ]; then
-          cat << 'EOF' > settings.gradle.kts
-          pluginManagement {
-              repositories { google(); mavenCentral(); gradlePluginPortal() }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories { google(); mavenCentral() }
-          }
-          rootProject.name = "FocusLock"
-          include(":app")
-          EOF
-          fi
-
-          if [ ! -f "build.gradle.kts" ]; then
-          cat << 'EOF' > build.gradle.kts
-          plugins {
-              id("com.android.application") version "8.5.2" apply false
-              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
-          }
-          EOF
-          fi
-
-          if [ ! -f "gradle.properties" ]; then
-          cat << 'EOF' > gradle.properties
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-          android.useAndroidX=true
-          kotlin.code.style=official
-          android.nonTransitiveRClass=true
-          EOF
-          fi
-
-          if [ ! -f "app/build.gradle.kts" ] || ! grep -q "org.jetbrains.kotlin.android" "app/build.gradle.kts"; then
-          cat << 'EOF' > app/build.gradle.kts
-          plugins {
-              id("com.android.application")
-              id("org.jetbrains.kotlin.android")
-          }
-          android {
-              namespace = "com.vidhya.focuslock"
-              compileSdk = 34
-              defaultConfig {
-                  applicationId = "com.vidhya.focuslock"
-                  minSdk = 26
-                  targetSdk = 34
-                  versionCode = 1
-                  versionName = "1.0.0"
-              }
-              buildTypes {
-                  release { isMinifyEnabled = false }
-                  debug { isMinifyEnabled = false }
-              }
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-              kotlinOptions { jvmTarget = "17" }
-              sourceSets {
-                  getByName("main") { java.srcDirs("src/main/java") }
-              }
-          }
-          dependencies {
-              implementation("androidx.core:core-ktx:1.13.1")
-              implementation("androidx.appcompat:appcompat:1.7.0")
-              implementation("com.google.android.material:material:1.12.0")
-              implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-              implementation("androidx.recyclerview:recyclerview:1.3.2")
-          }
-          EOF
-          fi
-
-          if [ ! -f "app/src/main/java/com/vidhya/focuslock/MainActivity.kt" ]; then
-          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/MainActivity.kt
-          package com.vidhya.focuslock
-          import android.content.Context
-          import android.content.Intent
-          import android.os.Bundle
-          import android.os.CountDownTimer
-          import android.provider.Settings
-          import android.view.View
-          import android.widget.Button
-          import android.widget.SeekBar
-          import android.widget.TextView
-          import android.widget.Toast
-          import androidx.appcompat.app.AlertDialog
-          import androidx.appcompat.app.AppCompatActivity
-          import com.google.android.material.button.MaterialButton
-          import java.util.Locale
-
-          class MainActivity : AppCompatActivity() {
-              private lateinit var sessionManager: SessionManager
-              private lateinit var tvTimer: TextView
-              private lateinit var btnStartLock: MaterialButton
-              private lateinit var btnSelectApps: Button
-              private var durationSeekBar: SeekBar? = null
-              private lateinit var tvSelectedDuration: TextView
-              private var countDownTimer: CountDownTimer? = null
-
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  try {
-                      setContentView(R.layout.activity_main)
-                      sessionManager = SessionManager(this)
-                      tvTimer = findViewById(R.id.tvTimer)
-                      btnStartLock = findViewById(R.id.btnStartLock)
-                      btnSelectApps = findViewById(R.id.btnSelectApps)
-                      durationSeekBar = findViewById(R.id.durationSlider)
-                      tvSelectedDuration = findViewById(R.id.tvSelectedDuration)
-
-                      durationSeekBar?.apply {
-                          max = 180
-                          if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) min = 5
-                          progress = 25
-                          setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                              override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
-                                  tvSelectedDuration.text = "${maxOf(5, p)} minutes"
-                              }
-                              override fun onStartTrackingTouch(sb: SeekBar?) {}
-                              override fun onStopTrackingTouch(sb: SeekBar?) {}
-                          })
-                      }
-
-                      findViewById<View>(R.id.chip25)?.setOnClickListener { setDuration(25) }
-                      findViewById<View>(R.id.chip45)?.setOnClickListener { setDuration(45) }
-                      findViewById<View>(R.id.chip60)?.setOnClickListener { setDuration(60) }
-
-                      btnSelectApps.setOnClickListener { showAppSelectionDialog() }
-
-                      btnStartLock.setOnClickListener {
-                          if (sessionManager.isSessionActive()) {
-                              startActivity(Intent(this, MathPuzzleActivity::class.java))
-                          } else {
-                              startFocusSession()
-                          }
-                      }
-                      checkPermissions()
-                  } catch (e: Exception) { e.printStackTrace() }
-              }
-
-              override fun onResume() { super.onResume(); updateUI() }
-
-              private fun setDuration(m: Int) {
-                  durationSeekBar?.progress = m
-                  tvSelectedDuration.text = "$m minutes"
-              }
-
-              private fun startFocusSession() {
-                  val d = maxOf(5, durationSeekBar?.progress ?: 25)
-                  sessionManager.startSession(d)
-                  try { startService(Intent(this, SessionTimerService::class.java)) } catch (e: Exception) {}
-                  Toast.makeText(this, "Focus Mode Activated for $d mins!", Toast.LENGTH_SHORT).show()
-                  updateUI()
-              }
-
-              private fun updateUI() {
-                  try {
-                      if (sessionManager.isSessionActive()) {
-                          btnStartLock.text = "Emergency Unlock (Solve Math)"
-                          btnStartLock.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFEF4444.toInt())
-                          durationSeekBar?.isEnabled = false
-                          btnSelectApps.isEnabled = false
-                          startTimerDisplay(sessionManager.getRemainingTimeMs())
-                      } else {
-                          countDownTimer?.cancel()
-                          btnStartLock.text = "Lock & Focus Now"
-                          btnStartLock.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF10B981.toInt())
-                          durationSeekBar?.isEnabled = true
-                          btnSelectApps.isEnabled = true
-                          val mins = maxOf(5, durationSeekBar?.progress ?: 25)
-                          tvTimer.text = String.format(Locale.getDefault(), "%02d:00", mins)
-                      }
-                  } catch (e: Exception) {}
-              }
-
-              private fun startTimerDisplay(ms: Long) {
-                  countDownTimer?.cancel()
-                  countDownTimer = object : CountDownTimer(ms, 1000) {
-                      override fun onTick(f: Long) {
-                          val s = f / 1000
-                          tvTimer.text = String.format(Locale.getDefault(), "%02d:%02d", s / 60, s % 60)
-                      }
-                      override fun onFinish() { updateUI() }
-                  }.start()
-              }
-
-              private fun showAppSelectionDialog() {
-                  val apps = listOf("com.google.android.youtube" to "YouTube", "com.instagram.android" to "Instagram", "com.android.chrome" to "Google Chrome")
-                  val names = apps.map { it.second }.toTypedArray()
-                  val pkgs = apps.map { it.first }.toTypedArray()
-                  val checked = BooleanArray(pkgs.size) { sessionManager.blockedPackages.contains(pkgs[it]) }
-
-                  AlertDialog.Builder(this)
-                      .setTitle("Select Apps to Lock")
-                      .setMultiChoiceItems(names, checked) { _, which, isChecked -> checked[which] = isChecked }
-                      .setPositiveButton("Save Selection") { _, _ ->
-                          val sel = mutableSetOf<String>()
-                          checked.forEachIndexed { i, c -> if (c) sel.add(pkgs[i]) }
-                          sessionManager.blockedPackages = sel
-                          Toast.makeText(this, "${sel.size} apps selected", Toast.LENGTH_SHORT).show()
-                      }
-                      .setNegativeButton("Cancel", null)
-                      .show()
-              }
-
-              private fun checkPermissions() {
-                  try {
-                      val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
-                      val s = "$packageName/${FocusAccessibilityService::class.java.canonicalName}"
-                      if (!enabled.contains(s)) {
-                          AlertDialog.Builder(this)
-                              .setTitle("Accessibility Permission Required")
-                              .setMessage("FocusLock needs Accessibility to detect when blocked apps are opened.")
-                              .setPositiveButton("Open Settings") { _, _ ->
-                                  try { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } catch (e: Exception) {}
-                              }
-                              .setNegativeButton("Later", null)
-                              .show()
-                      }
-                  } catch (e: Exception) {}
-              }
-          }
-          EOF
-          fi
-
-          if [ ! -f "app/src/main/java/com/vidhya/focuslock/SessionManager.kt" ]; then
-          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/SessionManager.kt
-          package com.vidhya.focuslock
-          import android.content.Context
-          import android.content.SharedPreferences
-
-          class SessionManager(context: Context) {
-              private val prefs: SharedPreferences = context.getSharedPreferences("focus_lock_prefs", Context.MODE_PRIVATE)
-              var isLocked: Boolean
-                  get() = prefs.getBoolean("is_locked", false)
-                  set(v) = prefs.edit().putBoolean("is_locked", v).apply()
-              var sessionEndTime: Long
-                  get() = prefs.getLong("session_end_time", 0L)
-                  set(v) = prefs.edit().putLong("session_end_time", v).apply()
-              var blockedPackages: Set<String>
-                  get() = prefs.getStringSet("blocked_packages", emptySet()) ?: emptySet()
-                  set(v) = prefs.edit().putStringSet("blocked_packages", v).apply()
-              fun startSession(mins: Int) {
-                  prefs.edit().putBoolean("is_locked", true).putLong("session_end_time", System.currentTimeMillis() + mins * 60000L).apply()
-              }
-              fun endSession() { prefs.edit().putBoolean("is_locked", false).putLong("session_end_time", 0L).apply() }
-              fun isSessionActive(): Boolean {
-                  if (!isLocked) return false
-                  if (System.currentTimeMillis() >= sessionEndTime) { endSession(); return false }
-                  return true
-              }
-              fun getRemainingTimeMs(): Long = maxOf(0L, sessionEndTime - System.currentTimeMillis())
-              fun isEmergencyPassActive(): Boolean = prefs.getBoolean("emergency_pass_active", false) && System.currentTimeMillis() < prefs.getLong("emergency_expires", 0L)
-              fun grantEmergencyPass(mins: Int = 2) {
-                  prefs.edit().putBoolean("emergency_pass_active", true).putLong("emergency_expires", System.currentTimeMillis() + mins * 60000L).apply()
-              }
-          }
-          EOF
-          fi
-
-          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/FocusAccessibilityService.kt
-          package com.vidhya.focuslock
-          import android.accessibilityservice.AccessibilityService
-          import android.content.Intent
-          import android.view.accessibility.AccessibilityEvent
-
-          class FocusAccessibilityService : AccessibilityService() {
-              private lateinit var sessionManager: SessionManager
-              override fun onServiceConnected() { super.onServiceConnected(); sessionManager = SessionManager(this) }
-              override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-                  if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-                  val pkg = event.packageName?.toString() ?: return
-                  if (pkg == packageName) return
-                  if (!::sessionManager.isInitialized) sessionManager = SessionManager(this)
-                  if (sessionManager.isSessionActive() && !sessionManager.isEmergencyPassActive()) {
-                      if (sessionManager.blockedPackages.contains(pkg)) {
-                          val intent = Intent(this, BlockActivity::class.java).apply {
-                              addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                              putExtra("BLOCKED_PACKAGE", pkg)
-                          }
-                          startActivity(intent)
-                      }
-                  }
-              }
-              override fun onInterrupt() {}
-          }
+          # Create card background & launcher icon
+          cat << 'EOF' > app/src/main/res/drawable/bg_card.xml
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="#131B2E"/><corners android:radius="20dp"/></shape>
           EOF
 
-          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/BlockActivity.kt
-          package com.vidhya.focuslock
-          import android.content.Intent
-          import android.os.Bundle
-          import android.widget.Button
-          import androidx.appcompat.app.AppCompatActivity
-
-          class BlockActivity : AppCompatActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_block)
-                  findViewById<Button>(R.id.btnGoHome)?.setOnClickListener {
-                      val home = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME); flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-                      startActivity(home); finish()
-                  }
-                  findViewById<Button>(R.id.btnEmergency)?.setOnClickListener {
-                      startActivity(Intent(this, MathPuzzleActivity::class.java)); finish()
-                  }
-              }
-              override fun onBackPressed() {
-                  val home = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME); flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-                  startActivity(home); finish()
-              }
-          }
+          cat << 'EOF' > app/src/main/res/drawable/ic_launcher.xml
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#10B981" android:pathData="M0,0h108v108h-108z"/></vector>
           EOF
 
-          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/MathPuzzleActivity.kt
-          package com.vidhya.focuslock
-          import android.os.Bundle
-          import android.widget.Button
-          import android.widget.EditText
-          import android.widget.Toast
-          import androidx.appcompat.app.AppCompatActivity
-
-          class MathPuzzleActivity : AppCompatActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  setContentView(R.layout.activity_puzzle)
-                  val sm = SessionManager(this)
-                  findViewById<Button>(R.id.btnSubmit)?.setOnClickListener {
-                      val input = findViewById<EditText>(R.id.etAnswer)?.text?.toString()?.trim()
-                      if (input == "604") {
-                          sm.grantEmergencyPass(2)
-                          Toast.makeText(this, "Correct! 2-min pass granted.", Toast.LENGTH_SHORT).show()
-                          finish()
-                      } else {
-                          Toast.makeText(this, "Incorrect! Expected answer: 604", Toast.LENGTH_SHORT).show()
-                      }
-                  }
-              }
-          }
+          cat << 'EOF' > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/emerald_dark"/><foreground android:drawable="@drawable/ic_launcher"/></adaptive-icon>
           EOF
+          cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
-          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/SessionTimerService.kt
-          package com.vidhya.focuslock
-          import android.app.*
-          import android.content.Intent
-          import android.content.pm.ServiceInfo
-          import android.os.Build
-          import android.os.IBinder
-          import androidx.core.app.NotificationCompat
+          # Compile the APK
+          gradle :app:assembleDebug --stacktrace --no-daemon
 
-          class SessionTimerService : Service() {
-              override fun onBind(intent: Intent?): IBinder? = null
-              override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                      val chan = NotificationChannel("focus_channel", "FocusLock", NotificationManager.IMPORTANCE_LOW)
-                      (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(chan)
-                  }
-                  val notif = NotificationCompat.Builder(this, "focus_channel")
-                      .setContentTitle("FocusLock Active")
-                      .setContentText("Countdown in progress")
-                      .setSmallIcon(android.R.drawable.ic_lock_lock)
-                      .build()
-                  if (Build.VERSION.SDK_INT >= 34) {
-                      startForeground(1001, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-                  } else {
-                      startForeground(1001, notif)
-                  }
-                  return START_STICKY
-              }
-          }
-          EOF
-
-          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/BootReceiver.kt
-          package com.vidhya.focuslock
-          import android.content.BroadcastReceiver
-          import android.content.Context
-          import android.content.Intent
-          import android.os.Build
-
-          class BootReceiver : BroadcastReceiver() {
-              override fun onReceive(context: Context, intent: I
+      - name: Upload FocusLock APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FocusLock-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
