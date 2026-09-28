@@ -1,0 +1,42 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows you to manually click "Run workflow" on your phone anytime
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout your project code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Java 17 (Required by Android Gradle Plugin 8.5.2)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # Step 3: Ensure Gradle wrapper script has execute permissions
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Step 4: Build the Debug APK using Gradle
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      # Step 5: Upload the generated APK so you can download it to your phone
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FocusLock-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
