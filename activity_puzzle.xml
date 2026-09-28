@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#131B2E"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Anti-Impulse Challenge"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Solve this arithmetic problem to prove you truly need to interrupt your focus:"
+        android:textColor="#94A3B8"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tvEquation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:text="34 × 19 - 42 = ?"
+        android:textColor="#10B981"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium" />
+
+    <EditText
+        android:id="@+id/etAnswer"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="16dp"
+        android:background="#0B0F19"
+        android:gravity="center"
+        android:hint="Enter answer"
+        android:inputType="numberSigned"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#475569" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSubmit"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="20dp"
+        android:text="Submit &amp; Get 2-Min Pass"
+        android:textColor="#FFFFFF"
+        app:backgroundTint="#10B981"
+        app:cornerRadius="12dp" />
+
+</LinearLayout>

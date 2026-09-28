@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">FocusLock</string>
+    <string name="device_admin_label">FocusLock Admin Guard</string>
+    <string name="device_admin_description">Prevents unauthorized removal of FocusLock while a focus session is actively running.</string>
+</resources>

@@ -1,0 +1,17 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.FocusLock" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/emerald_primary</item>
+        <item name="colorPrimaryVariant">@color/emerald_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+    </style>
+
+    <style name="Theme.FocusLock.Fullscreen" parent="Theme.FocusLock">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <style name="Theme.FocusLock.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
+        <item name="colorPrimary">@color/emerald_primary</item>
+    </style>
+</resources>
