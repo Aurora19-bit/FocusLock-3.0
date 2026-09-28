@@ -44,7 +44,7 @@ jobs:
             fi
           fi
 
-          echo "=== 3. Ensuring Launcher Icons exist (resolves mipmap/ic_launcher) ==="
+          echo "=== 3. Ensuring Launcher Icons exist ==="
           cat << 'EOF' > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -63,7 +63,7 @@ jobs:
           cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
           cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/drawable/ic_launcher.xml
 
-          echo "=== 4. Ensuring strings.xml exists (resolves string/app_name) ==="
+          echo "=== 4. Ensuring strings.xml exists ==="
           if [ ! -f "app/src/main/res/values/strings.xml" ]; then
           cat << 'EOF' > app/src/main/res/values/strings.xml
           <resources>
@@ -94,7 +94,7 @@ jobs:
           EOF
           fi
 
-          echo "=== 6. Ensuring themes.xml exists (resolves style/Theme.FocusLock) ==="
+          echo "=== 6. Ensuring themes.xml exists ==="
           if [ ! -f "app/src/main/res/values/themes.xml" ]; then
           cat << 'EOF' > app/src/main/res/values/themes.xml
           <resources xmlns:tools="http://schemas.android.com/tools">
@@ -102,6 +102,9 @@ jobs:
                   <item name="colorPrimary">@color/emerald_primary</item>
                   <item name="colorPrimaryVariant">@color/emerald_dark</item>
                   <item name="colorOnPrimary">@color/white</item>
+                  <item name="colorSecondary">@color/emerald_primary</item>
+                  <item name="colorSecondaryVariant">@color/emerald_dark</item>
+                  <item name="colorOnSecondary">@color/white</item>
                   <item name="android:statusBarColor">@color/bg_dark</item>
               </style>
               <style name="Theme.FocusLock.Fullscreen" parent="Theme.FocusLock">
@@ -110,6 +113,7 @@ jobs:
               </style>
               <style name="Theme.FocusLock.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
                   <item name="colorPrimary">@color/emerald_primary</item>
+                  <item name="colorSecondary">@color/emerald_primary</item>
               </style>
           </resources>
           EOF
@@ -203,11 +207,14 @@ jobs:
                       android:id="@+id/durationSlider"
                       android:layout_width="match_parent"
                       android:layout_height="wrap_content"
-                      android:valueFrom="5"
-                      android:valueTo="180"
-                      android:stepSize="5"
-                      android:value="25"
-                      android:layout_marginTop="16dp" />
+                      app:valueFrom="5.0"
+                      app:valueTo="180.0"
+                      app:stepSize="5.0"
+                      app:value="25.0"
+                      android:layout_marginTop="16dp"
+                      app:thumbColor="#10B981"
+                      app:trackColorActive="#10B981"
+                      app:trackColorInactive="#334155" />
                   <Button
                       android:id="@+id/btnSelectApps"
                       android:layout_width="match_parent"
@@ -224,6 +231,12 @@ jobs:
           </ScrollView>
           EOF
           fi
+
+          # Fix any invalid android:valueFrom / android:valueTo attributes in layout XMLs
+          sed -i 's/android:valueFrom/app:valueFrom/g' app/src/main/res/layout/*.xml 2>/dev/null || true
+          sed -i 's/android:valueTo/app:valueTo/g' app/src/main/res/layout/*.xml 2>/dev/null || true
+          sed -i 's/android:stepSize/app:stepSize/g' app/src/main/res/layout/*.xml 2>/dev/null || true
+          sed -i 's/android:value=/app:value=/g' app/src/main/res/layout/*.xml 2>/dev/null || true
 
           if [ ! -f "app/src/main/res/layout/activity_block.xml" ]; then
           cat << 'EOF' > app/src/main/res/layout/activity_block.xml
@@ -312,11 +325,7 @@ jobs:
           EOF
           fi
 
-          echo "=== 9. Removing package attr deprecation if present ==="
           sed -i 's/package="com.vidhya.focuslock"//g' app/src/main/AndroidManifest.xml 2>/dev/null || true
-
-          echo "Resource layout verified:"
-          ls -R app/src/main/res
 
       - name: Assemble FocusLock Debug APK
         run: gradle :app:assembleDebug --stacktrace --no-daemon
