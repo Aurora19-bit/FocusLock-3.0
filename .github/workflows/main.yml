@@ -1,5 +1,4 @@
-name: Build Android APK
-
+name: Build FocusLock APK
 on:
   push:
     branches: [ "main", "master" ]
@@ -7,11 +6,9 @@ on:
 
 jobs:
   build:
-    name: Build Debug APK
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -25,12 +22,29 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # Explicitly builds :app:assembleDebug
-      - name: Build with Gradle
+      - name: Auto-repair Layout & Verify Manifest
+        run: |
+          # If files were pushed inside a nested FocusLock folder, move them up
+          if [ -d "FocusLock" ] && [ ! -f "settings.gradle.kts" ]; then
+            echo "Un-nesting FocusLock directory..."
+            cp -rn FocusLock/* . 2>/dev/null || cp -r FocusLock/* .
+          fi
+
+          mkdir -p app/src/main
+
+          # If manifest exists in another folder, copy to expected location
+          if [ ! -f "app/src/main/AndroidManifest.xml" ]; then
+            FOUND=$(find . -name "AndroidManifest.xml" -not -path "*/app/src/main/*" | head -n 1)
+            if [ -n "$FOUND" ]; then
+              echo "Found manifest at $FOUND. Moving to app/src/main/AndroidManifest.xml"
+              cp "$FOUND" app/src/main/AndroidManifest.xml
+            fi
+          fi
+
+      - name: Assemble FocusLock Debug APK
         run: gradle :app:assembleDebug --stacktrace --no-daemon
 
-      # Upload the generated APK
-      - name: Upload APK Artifact
+      - name: Upload FocusLock APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: FocusLock-debug.apk
