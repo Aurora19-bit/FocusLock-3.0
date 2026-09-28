@@ -3,9 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch: # Allows you to manually click "Run workflow" on your phone anytime
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,27 +11,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout your project code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up Java 17 (Required by Android Gradle Plugin 8.5.2)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      # Step 3: Ensure Gradle wrapper script has execute permissions
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      # Automatically installs and sets up Gradle 8.7 (bypasses broken ./gradlew)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
 
-      # Step 4: Build the Debug APK using Gradle
+      # Runs assembleDebug directly with the installed Gradle
       - name: Build with Gradle
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+        run: gradle assembleDebug --stacktrace --no-daemon
 
-      # Step 5: Upload the generated APK so you can download it to your phone
+      # Upload the generated APK
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
