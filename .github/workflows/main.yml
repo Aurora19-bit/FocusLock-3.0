@@ -1,58 +1,32 @@
-name: Build FocusLock APK
-on: [push, workflow_dispatch]
+name: Build Android APK
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.7'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      - name: Organize Files & Build APK
-        run: |
-          mkdir -p app/src/main/java/com/vidhya/focuslock
-          mkdir -p app/src/main/res/layout
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/xml
-          mkdir -p app/src/main/res/mipmap-anydpi-v26
-          mkdir -p app/src/main/res/drawable
+      - name: Assemble Debug APK
+        run: ./gradlew assembleDebug --no-daemon
 
-          # Move all your existing code files into app directory
-          cp -f *.kt app/src/main/java/com/vidhya/focuslock/ 2>/dev/null || true
-          cp -f activity_*.xml app/src/main/res/layout/ 2>/dev/null || true
-          cp -f strings.xml colors.xml themes.xml app/src/main/res/values/ 2>/dev/null || true
-          cp -f accessibility_service_config.xml device_admin_receiver.xml app/src/main/res/xml/ 2>/dev/null || true
-
-          # Create card background & launcher icon
-          cat << 'EOF' > app/src/main/res/drawable/bg_card.xml
-          <shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="#131B2E"/><corners android:radius="20dp"/></shape>
-          EOF
-
-          cat << 'EOF' > app/src/main/res/drawable/ic_launcher.xml
-          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#10B981" android:pathData="M0,0h108v108h-108z"/></vector>
-          EOF
-
-          cat << 'EOF' > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/emerald_dark"/><foreground android:drawable="@drawable/ic_launcher"/></adaptive-icon>
-          EOF
-          cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-
-          # Compile the APK
-          gradle :app:assembleDebug --stacktrace --no-daemon
-
-      - name: Upload FocusLock APK
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FocusLock-APK
+          name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
