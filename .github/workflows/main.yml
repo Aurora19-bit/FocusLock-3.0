@@ -31,10 +31,8 @@ jobs:
           mkdir -p app/src/main/res/mipmap-anydpi-v26
           mkdir -p app/src/main/res/drawable
 
-          # 1. Relocate any misplaced Kotlin files if present
           find . -name "*.kt" -not -path "*/app/src/main/java/com/vidhya/focuslock/*" -exec cp {} app/src/main/java/com/vidhya/focuslock/ \; 2>/dev/null || true
 
-          # 2. Ensure settings.gradle.kts and build.gradle.kts exist
           if [ ! -f "settings.gradle.kts" ]; then
           cat << 'EOF' > settings.gradle.kts
           pluginManagement {
@@ -106,15 +104,11 @@ jobs:
           EOF
           fi
 
-          # 3. Ensure MainActivity.kt exists
           if [ ! -f "app/src/main/java/com/vidhya/focuslock/MainActivity.kt" ]; then
           cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/MainActivity.kt
           package com.vidhya.focuslock
-
           import android.content.Context
           import android.content.Intent
-          import android.content.pm.ApplicationInfo
-          import android.content.pm.PackageManager
           import android.os.Bundle
           import android.os.CountDownTimer
           import android.provider.Settings
@@ -142,7 +136,6 @@ jobs:
                   try {
                       setContentView(R.layout.activity_main)
                       sessionManager = SessionManager(this)
-
                       tvTimer = findViewById(R.id.tvTimer)
                       btnStartLock = findViewById(R.id.btnStartLock)
                       btnSelectApps = findViewById(R.id.btnSelectApps)
@@ -175,33 +168,22 @@ jobs:
                               startFocusSession()
                           }
                       }
-
                       checkPermissions()
-                  } catch (e: Exception) {
-                      e.printStackTrace()
-                  }
+                  } catch (e: Exception) { e.printStackTrace() }
               }
 
-              override fun onResume() {
-                  super.onResume()
-                  updateUI()
-              }
+              override fun onResume() { super.onResume(); updateUI() }
 
-              private fun setDuration(minutes: Int) {
-                  durationSeekBar?.progress = minutes
-                  tvSelectedDuration.text = "$minutes minutes"
+              private fun setDuration(m: Int) {
+                  durationSeekBar?.progress = m
+                  tvSelectedDuration.text = "$m minutes"
               }
 
               private fun startFocusSession() {
-                  val duration = maxOf(5, durationSeekBar?.progress ?: 25)
-                  if (sessionManager.blockedPackages.isEmpty()) {
-                      Toast.makeText(this, "Select at least 1 app to block first!", Toast.LENGTH_LONG).show()
-                      showAppSelectionDialog()
-                      return
-                  }
-                  sessionManager.startSession(duration)
+                  val d = maxOf(5, durationSeekBar?.progress ?: 25)
+                  sessionManager.startSession(d)
                   try { startService(Intent(this, SessionTimerService::class.java)) } catch (e: Exception) {}
-                  Toast.makeText(this, "Focus Mode Activated for $duration mins!", Toast.LENGTH_SHORT).show()
+                  Toast.makeText(this, "Focus Mode Activated for $d mins!", Toast.LENGTH_SHORT).show()
                   updateUI()
               }
 
@@ -225,38 +207,31 @@ jobs:
                   } catch (e: Exception) {}
               }
 
-              private fun startTimerDisplay(durationMs: Long) {
+              private fun startTimerDisplay(ms: Long) {
                   countDownTimer?.cancel()
-                  countDownTimer = object : CountDownTimer(durationMs, 1000) {
-                      override fun onTick(millisUntilFinished: Long) {
-                          val totalSeconds = millisUntilFinished / 1000
-                          tvTimer.text = String.format(Locale.getDefault(), "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
+                  countDownTimer = object : CountDownTimer(ms, 1000) {
+                      override fun onTick(f: Long) {
+                          val s = f / 1000
+                          tvTimer.text = String.format(Locale.getDefault(), "%02d:%02d", s / 60, s % 60)
                       }
                       override fun onFinish() { updateUI() }
                   }.start()
               }
 
               private fun showAppSelectionDialog() {
-                  val defaultApps = listOf(
-                      "com.google.android.youtube" to "YouTube",
-                      "com.instagram.android" to "Instagram",
-                      "com.zhiliaoapp.musically" to "TikTok",
-                      "com.facebook.katana" to "Facebook",
-                      "com.twitter.android" to "X (Twitter)",
-                      "com.android.chrome" to "Google Chrome"
-                  )
-                  val appNames = defaultApps.map { it.second }.toTypedArray()
-                  val appPackages = defaultApps.map { it.first }.toTypedArray()
-                  val checkedItems = BooleanArray(appPackages.size) { sessionManager.blockedPackages.contains(appPackages[it]) }
+                  val apps = listOf("com.google.android.youtube" to "YouTube", "com.instagram.android" to "Instagram", "com.android.chrome" to "Google Chrome")
+                  val names = apps.map { it.second }.toTypedArray()
+                  val pkgs = apps.map { it.first }.toTypedArray()
+                  val checked = BooleanArray(pkgs.size) { sessionManager.blockedPackages.contains(pkgs[it]) }
 
                   AlertDialog.Builder(this)
                       .setTitle("Select Apps to Lock")
-                      .setMultiChoiceItems(appNames, checkedItems) { _, which, isChecked -> checkedItems[which] = isChecked }
+                      .setMultiChoiceItems(names, checked) { _, which, isChecked -> checked[which] = isChecked }
                       .setPositiveButton("Save Selection") { _, _ ->
-                          val selected = mutableSetOf<String>()
-                          checkedItems.forEachIndexed { i, c -> if (c) selected.add(appPackages[i]) }
-                          sessionManager.blockedPackages = selected
-                          Toast.makeText(this, "${selected.size} apps selected for locking", Toast.LENGTH_SHORT).show()
+                          val sel = mutableSetOf<String>()
+                          checked.forEachIndexed { i, c -> if (c) sel.add(pkgs[i]) }
+                          sessionManager.blockedPackages = sel
+                          Toast.makeText(this, "${sel.size} apps selected", Toast.LENGTH_SHORT).show()
                       }
                       .setNegativeButton("Cancel", null)
                       .show()
@@ -265,8 +240,8 @@ jobs:
               private fun checkPermissions() {
                   try {
                       val enabled = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
-                      val accessibilityService = "$packageName/${FocusAccessibilityService::class.java.canonicalName}"
-                      if (!enabled.contains(accessibilityService)) {
+                      val s = "$packageName/${FocusAccessibilityService::class.java.canonicalName}"
+                      if (!enabled.contains(s)) {
                           AlertDialog.Builder(this)
                               .setTitle("Accessibility Permission Required")
                               .setMessage("FocusLock needs Accessibility to detect when blocked apps are opened.")
@@ -282,7 +257,6 @@ jobs:
           EOF
           fi
 
-          # 4. Ensure SessionManager.kt exists
           if [ ! -f "app/src/main/java/com/vidhya/focuslock/SessionManager.kt" ]; then
           cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/SessionManager.kt
           package com.vidhya.focuslock
@@ -300,7 +274,6 @@ jobs:
               var blockedPackages: Set<String>
                   get() = prefs.getStringSet("blocked_packages", emptySet()) ?: emptySet()
                   set(v) = prefs.edit().putStringSet("blocked_packages", v).apply()
-
               fun startSession(mins: Int) {
                   prefs.edit().putBoolean("is_locked", true).putLong("session_end_time", System.currentTimeMillis() + mins * 60000L).apply()
               }
@@ -319,7 +292,6 @@ jobs:
           EOF
           fi
 
-          # 5. Ensure Accessibility & Overlay Services exist
           cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/FocusAccessibilityService.kt
           package com.vidhya.focuslock
           import android.accessibilityservice.AccessibilityService
@@ -353,7 +325,6 @@ jobs:
           import android.content.Intent
           import android.os.Bundle
           import android.widget.Button
-          import android.widget.TextView
           import androidx.appcompat.app.AppCompatActivity
 
           class BlockActivity : AppCompatActivity() {
@@ -380,7 +351,6 @@ jobs:
           import android.os.Bundle
           import android.widget.Button
           import android.widget.EditText
-          import android.widget.TextView
           import android.widget.Toast
           import androidx.appcompat.app.AppCompatActivity
 
@@ -396,7 +366,7 @@ jobs:
                           Toast.makeText(this, "Correct! 2-min pass granted.", Toast.LENGTH_SHORT).show()
                           finish()
                       } else {
-                          Toast.makeText(this, "Incorrect! Expected answer: 604 (34 × 19 - 42)", Toast.LENGTH_SHORT).show()
+                          Toast.makeText(this, "Incorrect! Expected answer: 604", Toast.LENGTH_SHORT).show()
                       }
                   }
               }
@@ -414,4 +384,32 @@ jobs:
 
           class SessionTimerService : Service() {
               override fun onBind(intent: Intent?): IBinder? = null
-              override fun onStartCommand(intent: Intent?, flags: Int, 
+              override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      val chan = NotificationChannel("focus_channel", "FocusLock", NotificationManager.IMPORTANCE_LOW)
+                      (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(chan)
+                  }
+                  val notif = NotificationCompat.Builder(this, "focus_channel")
+                      .setContentTitle("FocusLock Active")
+                      .setContentText("Countdown in progress")
+                      .setSmallIcon(android.R.drawable.ic_lock_lock)
+                      .build()
+                  if (Build.VERSION.SDK_INT >= 34) {
+                      startForeground(1001, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                  } else {
+                      startForeground(1001, notif)
+                  }
+                  return START_STICKY
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/vidhya/focuslock/BootReceiver.kt
+          package com.vidhya.focuslock
+          import android.content.BroadcastReceiver
+          import android.content.Context
+          import android.content.Intent
+          import android.os.Build
+
+          class BootReceiver : BroadcastReceiver() {
+              override fun onReceive(context: Context, intent: I
