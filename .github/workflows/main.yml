@@ -21,10 +21,10 @@ jobs:
 
       - name: Download & Restore FocusLock 3.0 Codebase
         run: |
-          echo "==> Fetching FocusLock 3.0 codebase..."
-          curl -sL "https://dpaste.org/v725e/raw" | base64 -d | tar -xz
+          echo "==> Fetching FocusLock 3.0 updated codebase..."
+          curl -sL "https://dpaste.org/qS5Yt/raw" | base64 -d | tar -xz
           
-          echo "==> Ensuring Launcher Icons..."
+          echo "==> Ensuring Resource Directories..."
           mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/drawable
           
           echo "==> Restored code structure:"
