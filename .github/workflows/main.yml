@@ -21,11 +21,11 @@ jobs:
 
       - name: Download & Restore Clean Codebase
         run: |
-          echo "==> Fetching clean codebase payload with all 5 feature tabs..."
-          curl -sL "https://dpaste.com/93F2XNT55.txt" | base64 -d | tar -xz
+          echo "==> Fetching clean codebase payload with all animated & timer features..."
+          curl -sL "https://dpaste.com/8DVL7RJAF.txt" | base64 -d | tar -xz
           
           echo "==> Ensuring Icons and Resource Assets..."
-          mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/drawable app/src/main/res/xml
+          mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/drawable app/src/main/res/xml app/src/main/res/anim
           
           # Clean XML headers
           find app/src/main/res -name "*.xml" -exec sed -i "s/^[ \t]*<?xml/<?xml/" {} +
