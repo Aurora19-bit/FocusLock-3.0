@@ -22,7 +22,8 @@ jobs:
       - name: Download & Restore Clean Codebase
         run: |
           echo "==> Fetching clean codebase payload with all 6 tabs & features..."
-          curl -sL "https://dpaste.com/DCXMWAJCA.txt" | base64 -d | tar -xz
+          curl -sL "https://api.pastes.dev/FEWNAHPQrm" -o payload.b64
+          base64 -d payload.b64 | tar -xz
           
           echo "==> Ensuring Icons and Resource Assets..."
           mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/drawable app/src/main/res/xml app/src/main/res/anim
