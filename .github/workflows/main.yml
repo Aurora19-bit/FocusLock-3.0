@@ -19,22 +19,13 @@ jobs:
         with:
           gradle-version: 8.7
 
-      - name: Download & Restore FocusLock 3.0 Codebase
+      - name: Download & Restore Clean Codebase
         run: |
-          echo "==> Fetching FocusLock 3.0 updated codebase..."
-          curl -sL "https://dpaste.com/9THY7NRJN.txt" | base64 -d | tar -xz
+          echo "==> Fetching clean codebase payload..."
+          curl -sL "https://dpaste.com/5XZYJUMJQ.txt" | base64 -d | tar -xz
           
-          echo "==> Ensuring Resource Directories & Icons..."
-          mkdir -p app/src/main/res/mipmap-anydpi-v26 app/src/main/res/drawable app/src/main/res/xml
-          
-          # Ensure both standard and round icons exist to satisfy Android AAPT resource linking
-          if [ -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml ]; then
-            cp app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-          fi
-          
-          echo "==> Restored code structure:"
-          ls -la app/src/main/java/com/vidhya/focuslock/
-          ls -la app/src/main/res/mipmap-anydpi-v26/
+          echo "==> Sanitizing XML files across resources..."
+          find app/src/main/res -name "*.xml" -exec sed -i "s/^[ \t]*<?xml/<?xml/" {} +
 
           echo "==> Compiling FocusLock 3.0 APK..."
           gradle :app:assembleDebug --stacktrace --no-daemon
